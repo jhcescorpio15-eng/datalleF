@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <title>Para ti 🌻</title>
 <style>
@@ -25,7 +25,6 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 }
 .screen.hide{opacity:0;visibility:hidden;pointer-events:none}
 
-/* INTRO RESPONSIVA */
 .intro{
   text-align:center;
   width: min(92%, 520px);
@@ -61,14 +60,13 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 
 #hud{position:fixed;inset:0;z-index:5;pointer-events:none}
 
-/* CORRECCIÓN DEL ENCABEZADO Y LOS BOTONES superpuestos */
 .heading{
  position:absolute;
  top:15px;
  left:50%;
  transform:translateX(-50%);
  text-align:center;
- width: calc(100% - 130px); /* Deja espacio lateral para los botones */
+ width: calc(100% - 130px);
  max-width: 550px;
  padding: 8px 16px;
  border: 1px solid rgba(255,216,74,.3);
@@ -93,7 +91,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
  display: block;
  margin-top: 4px;
  line-height: 1.3;
- white-space: normal; /* Permite que la frase larga haga salto de línea si es necesario */
+ white-space: normal;
 }
 
 .icon{
@@ -183,7 +181,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 <section id="intro" class="screen">
   <div class="intro intro-card">
     <div class="sunflower">🌻</div>
-    <h1>Para ti Fiore</h1>
+    <h1>Para ti</h1>
     <p>No se necesitan grandes motivos para regalar un detalle bonito, solo las ganas de alegrarte el día.</p>
     <button class="btn btn-lg" id="start">Abrir mi regalo ✨</button>
   </div>
@@ -224,7 +222,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 <script>
 const S=document.getElementById("space"),W=document.getElementById("world");
 const sc=S.getContext("2d"),c=W.getContext("2d");
-let w=innerWidth,h=innerHeight,dpr=Math.min(devicePixelRatio||1,1.5),cx,cy;
+
+let w=innerWidth,h=innerHeight,dpr=Math.min(devicePixelRatio||1, 1.2),cx,cy;
 
 function resize(){
  w=innerWidth;h=innerHeight;cx=w/2;cy=h/2;
@@ -233,30 +232,69 @@ function resize(){
 }
 addEventListener("resize",resize);resize();
 
-const stars=Array.from({length:400},()=>({
+const stars=Array.from({length:320},()=>({
  x:Math.random(),y:Math.random(),z:.2+Math.random()*.8,r:.3+Math.random()*1.4,
  p:Math.random()*Math.PI*2
 }));
 
+// PUNTOS DE LA GALAXIA ESPIRAL ORIGINAL
 const pts=[];
-for(let i=0;i<2800;i++){
+for(let i=0;i<2400;i++){
  const arm=i%5, r=18+Math.pow(Math.random(),.72)*650;
  const a=arm*Math.PI*2/5+r*.0105+(Math.random()-.5)*.72;
  const gold=145+Math.floor(Math.random()*70);
  pts.push({r,a,y:(Math.random()-.5)*90*Math.sqrt(r/650),s:.35+Math.random()*1.5,o:.25+Math.random()*.75, color:`rgba(255,${gold},40,`});
 }
 
-const heartParticles = Array.from({length: 500}, (_, i) => {
-  const t = (i / 500) * Math.PI * 2;
+// 1. DEFINICIÓN DEL CORAZÓN (Más denso, definido y elevado)
+const heart3D = Array.from({length: 220}, (_, i) => {
+  const t = Math.random() * Math.PI * 2;
   const edge = 16 * Math.pow(Math.sin(t), 3);
   const yy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+  const z = (Math.random() - 0.5) * 45 * 1.8;
   return {
-    edge, yy,
-    color: i % 9 === 0 ? "#fff4a8" : (i % 3 === 0 ? "#ffd83d" : "#ffb300"),
-    rr: .65 + Math.random() * 1.5,
-    phase: i * .37
+    x: edge * 9.8,
+    y: (yy * 9.8) - 200, // Posición elevada sobre la galaxia
+    z: z,
+    color: i % 8 === 0 ? "#ffffff" : (i % 3 === 0 ? "#ffe875" : "#ffb300"),
+    s: 1.4 + Math.random() * 2.2,
+    phase: Math.random() * Math.PI * 2
   };
 });
+
+// 2. RENDERIZADO DEL CORAZÓN CON GLOW (Efecto resplandor)
+function draw3DHeart() {
+  c.save();
+  c.globalCompositeOperation = "lighter";
+
+  // Latido del corazón más natural
+  const pulse = 1 + Math.sin(time * 0.004) * 0.06 + Math.pow(Math.sin(time * 0.008), 4) * 0.03;
+  
+  for (let i = 0; i < heart3D.length; i++) {
+    const p = heart3D[i];
+    const q = project(p.x * pulse, p.y * pulse, p.z * pulse);
+    
+    // Parpadeo suave e individual por partícula
+    const alpha = 0.45 + 0.55 * Math.abs(Math.sin(time * 0.003 + p.phase));
+    c.globalAlpha = alpha;
+    
+    const size = Math.max(1.0, p.s * q.scale * zoom * 1.4);
+
+    // Resplandor dorado exterior (Glow)
+    c.fillStyle = "rgba(255, 180, 0, 0.25)";
+    c.beginPath();
+    c.arc(q.x, q.y, size * 2.5, 0, Math.PI * 2);
+    c.fill();
+
+    // Núcleo brillante de la estrella
+    c.fillStyle = p.color;
+    c.beginPath();
+    c.arc(q.x, q.y, size, 0, Math.PI * 2);
+    c.fill();
+  }
+  
+  c.restore();
+}
 
 const flowers = [
   {a:.15, r:205,     t: "Me gusta conocerte 🌻",
@@ -266,17 +304,30 @@ const flowers = [
   {a:1.63, r:455,     t: "Para sacarte una sonrisa 😊",
     m: "Espero que al menos esta pequeña sorpresa te saque una sonrisa.", kind:"sunflower", photo:"foto3.png"},
   {a:2.40, r:275,     t: "Porque sí 💛",
-    m: "A veces simplemente nace tener un detalle bonito con alguien importante en su vida.", kind:"bouquet", photo:"foto1.png"},
-  {a:3.12, r:535, t:"Para sacarte una sonrisa 😊", m:"Espero que al menos esta pequeña sorpresa te saque una sonrisa.", kind:"tulips", photo:"foto2.png"},
-  {a:3.88, r:365, t:"Porque sí 💛", m:"A veces simplemente nace tener un detalle bonito con alguien.", kind:"bouquet", photo:"foto3.png"},
+    m: "A veces simplemente nace tener un detalle bonito con alguien importante en su vida.", kind:"bouquet", photo:"foto4.png"},
+  {a:3.12, r:535, t:"Para sacarte una sonrisa 😊", m:"Espero que al menos esta pequeña sorpresa te saque una sonrisa.", kind:"tulips", photo:"foto1.png"},
+  {a:3.88, r:365, t:"Porque sí 💛", m:"A veces simplemente nace tener un detalle bonito con alguien.", kind:"bouquet", photo:"foto2.png"},
   {a:4.62, r:245,     t: "Me gusta tu forma de ser ✨",
-    m: "Hay algo en tu manera de ser que hace que cada vez tenga más ganas de seguir conociéndote.", kind:"sunflower", photo:"foto1.png"},
-  {a:5.35, r:455, t:"Una última 🌻", m:"Y esta última también es para ti. Espero que te haya gustado la sorpresa.", kind:"bouquet", photo:"foto2.png"}
-];
+    m: "Hay algo en tu manera de ser que hace que cada vez tenga más ganas de seguir conociéndote.", kind:"sunflower", photo:"foto3.png"},
+  {a:5.35, r:455, t:"Una última 🌻", m:"Y esta última también es para ti. Espero que te haya gustado la sorpresa.", kind:"bouquet", photo:"foto4.png"}
 
-// --- RENDERIZADO DETALLADO CON GRADIENTES MEJORADOS (Offscreen Canvas) ---
+  
+];
+// 1. LISTA AMPLIADA CON 10 PLANETAS ÚNICOS
+const planets = [
+  { r: 180, a: 0.2,  speed: 0.0009, size: 20, color: "#ff4500", type: "lava" },         // Planeta de lava incandescente
+  { r: 280, a: 1.5,  speed: 0.0007, size: 24, color: "#e67e22", type: "rocky" },        // Rocoso con cráteres
+  { r: 390, a: 3.1,  speed: 0.0005, size: 34, color: "#3498db", type: "rings", ringColor: "rgba(52, 152, 219, 0.5)" }, // Azul con anillo
+  { r: 510, a: 4.8,  speed: 0.0004, size: 44, color: "#f1c40f", type: "gas", stripeColor: "#d35400", spot: true }, // Júpiter con Gran Mancha
+  { r: 640, a: 0.8,  speed: 0.0003, size: 26, color: "#00f2ff", type: "ice" },         // Hielo Neón
+  { r: 760, a: 2.4,  speed: 0.00025, size: 38, color: "#e74c3c", type: "doubleRings", ringColor: "rgba(231, 76, 60, 0.45)" }, // Doble anillo
+  { r: 890, a: 5.6,  speed: 0.0002, size: 32, color: "#9b59b6", type: "moons" },        // Con 2 mini lunas
+  { r: 1020, a: 1.2, speed: 0.00016, size: 36, color: "#2ecc71", type: "toxic" },       // Planeta tóxico / Esmeralda
+  { r: 1150, a: 3.8, speed: 0.00012, size: 28, color: "#ff7675", type: "dustDisk" },    // Disco de polvo estelar
+  { r: 1280, a: 0.1, speed: 0.00009, size: 48, color: "#fd79a8", type: "star" }        // Mini estrella / Sol rosa distante
+];
 const flowerCaches = {};
-function createCache(type, drawFn, size = 160) {
+function createCache(type, drawFn, size = 140) {
   const canvas = document.createElement("canvas");
   canvas.width = size * 2; canvas.height = size * 2;
   const ctx = canvas.getContext("2d");
@@ -292,8 +343,8 @@ function renderSunflowerRaw(ctx, size) {
   ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,size*1.1); ctx.stroke();
 
   const layers = [
-    { count: 22, rMin: 0.18, rMax: 0.6, grad: ["#c27400", "#ffcc00", "#ffee88"] },
-    { count: 18, rMin: 0.16, rMax: 0.52, grad: ["#d98200", "#ffe255", "#fff3aa"] }
+    { count: 20, rMin: 0.18, rMax: 0.6, grad: ["#c27400", "#ffcc00", "#ffee88"] },
+    { count: 16, rMin: 0.16, rMax: 0.52, grad: ["#d98200", "#ffe255", "#fff3aa"] }
   ];
 
   layers.forEach((layer) => {
@@ -325,14 +376,138 @@ function renderSunflowerRaw(ctx, size) {
   ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, centerR, 0, Math.PI * 2); ctx.fill();
 
   const goldenAngle = 137.5 * (Math.PI / 180);
-  for (let i = 0; i < 70; i++) {
-    const r = Math.sqrt(i / 70) * (centerR * 0.9);
+  for (let i = 0; i < 50; i++) {
+    const r = Math.sqrt(i / 50) * (centerR * 0.9);
     const theta = i * goldenAngle;
     ctx.fillStyle = (i % 3 === 0) ? "#b88328" : "#2b1703";
     ctx.beginPath(); ctx.arc(Math.cos(theta)*r, Math.sin(theta)*r, size*0.008, 0, Math.PI * 2); ctx.fill();
   }
 }
+function drawPlanets() {
+  const renderList = [];
 
+  for (const p of planets) {
+    p.a += p.speed;
+
+    const x = Math.cos(p.a) * p.r;
+    const z = Math.sin(p.a) * p.r;
+    const y = Math.sin(p.a * 1.8) * 35; // Oscilación en eje Y
+
+    const q = project(x, y, z);
+    renderList.push({ p, q });
+  }
+
+  // Ordenar por profundidad Z para correcta perspectiva 3D
+  renderList.sort((a, b) => b.q.z - a.q.z);
+
+  for (const item of renderList) {
+    const { p, q } = item;
+    const size = Math.max(5, p.size * q.scale * zoom);
+
+    c.save();
+    c.translate(q.x, q.y);
+
+    // ATMÓSFERA Y GLOW
+    const glowMult = p.type === "star" ? 3.5 : (p.type === "lava" ? 2.5 : 2.0);
+    const glow = c.createRadialGradient(0, 0, size * 0.3, 0, 0, size * glowMult);
+    glow.addColorStop(0, p.color);
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = glow;
+    c.beginPath();
+    c.arc(0, 0, size * glowMult, 0, Math.PI * 2);
+    c.fill();
+
+    // ANILLOS
+    if (p.type === "rings" || p.type === "doubleRings" || p.type === "dustDisk") {
+      c.save();
+      c.scale(1, 0.3);
+      c.strokeStyle = p.ringColor || p.color;
+      c.lineWidth = p.type === "dustDisk" ? size * 0.8 : size * 0.35;
+      c.globalAlpha = p.type === "dustDisk" ? 0.3 : 0.8;
+      c.beginPath();
+      c.arc(0, 0, size * 2.3, 0, Math.PI * 2);
+      c.stroke();
+
+      if (p.type === "doubleRings") {
+        c.lineWidth = size * 0.15;
+        c.beginPath();
+        c.arc(0, 0, size * 2.8, 0, Math.PI * 2);
+        c.stroke();
+      }
+      c.restore();
+    }
+
+    // CUERPO DEL PLANETA
+    const grad = c.createRadialGradient(-size * 0.35, -size * 0.35, size * 0.05, 0, 0, size);
+    if (p.type === "ice") {
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.3, "#a5f3fc");
+      grad.addColorStop(1, "#0284c7");
+    } else if (p.type === "lava") {
+      grad.addColorStop(0, "#fffb00");
+      grad.addColorStop(0.3, "#ff4500");
+      grad.addColorStop(1, "#3a0000");
+    } else if (p.type === "star") {
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.5, p.color);
+      grad.addColorStop(1, "#6c5ce7");
+    } else {
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.25, p.color);
+      grad.addColorStop(1, "#05050a");
+    }
+
+    c.fillStyle = grad;
+    c.beginPath();
+    c.arc(0, 0, size, 0, Math.PI * 2);
+    c.fill();
+
+    // DETALLES VISUALES ADICIONALES
+    c.save();
+    c.clip(); // Recorta los detalles dentro de la esfera
+
+    // Franjas de gas
+    if (p.type === "gas" || p.type === "toxic") {
+      c.fillStyle = p.stripeColor || "rgba(0,0,0,0.3)";
+      c.globalAlpha = 0.35;
+      c.fillRect(-size, -size * 0.4, size * 2, size * 0.22);
+      c.fillRect(-size, size * 0.1, size * 2, size * 0.28);
+      
+      if (p.spot) {
+        c.fillStyle = "#a70000";
+        c.beginPath();
+        c.ellipse(size * 0.3, size * 0.2, size * 0.25, size * 0.15, 0, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+
+    // Cráteres
+    if (p.type === "rocky") {
+      c.fillStyle = "rgba(0,0,0,0.25)";
+      [ {x:-0.3, y:-0.2, r:0.22}, {x:0.2, y:0.3, r:0.28}, {x:0.4, y:-0.4, r:0.18} ].forEach(cr => {
+        c.beginPath();
+        c.arc(cr.x * size, cr.y * size, cr.r * size, 0, Math.PI * 2);
+        c.fill();
+      });
+    }
+    c.restore();
+
+    // Lunas orbitando
+    if (p.type === "moons") {
+      for (let m = 0; m < 2; m++) {
+        const mAngle = time * (0.003 + m * 0.002) + m * Math.PI;
+        const mx = Math.cos(mAngle) * size * (1.8 + m * 0.6);
+        const my = Math.sin(mAngle) * size * (0.6 + m * 0.2);
+        c.fillStyle = m === 0 ? "#e2e8f0" : "#cbd5e1";
+        c.beginPath();
+        c.arc(mx, my, size * (0.15 - m * 0.03), 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+
+    c.restore();
+  }
+}
 function renderBouquetRaw(ctx, size) {
   const paper = ctx.createLinearGradient(-size*.4,0,size*.4,0);
   paper.addColorStop(0,"#9e673a"); paper.addColorStop(0.4,"#e0b280"); paper.addColorStop(1,"#7a4921");
@@ -376,6 +551,7 @@ createCache("bouquet", renderBouquetRaw);
 createCache("tulips", renderTulipsRaw);
 
 let rotX=.16,rotY=0,zoom=1,time=0,drag=false,lx=0,ly=0,started=false,selected=null;
+let interactionCount=0;
 const bursts=[];
 
 function project(x,y,z){
@@ -396,19 +572,32 @@ function starsDraw(){
  sc.globalAlpha=1;
 }
 
-function drawParticleHeart(cx,cy,size){
- c.save();
- c.globalCompositeOperation="lighter";
- for(let i=0;i<heartParticles.length;i++){
-    const p = heartParticles[i];
-    const px=cx+p.edge*(size/32);
-    const py=cy+p.yy*(size/32);
-    const tw=.45+.55*Math.sin(time*.004+p.phase);
-    c.globalAlpha=(.25+tw*.45);
-    c.fillStyle=p.color;
-    c.beginPath(); c.arc(px,py,p.rr,0,Math.PI*2); c.fill();
- }
- c.restore();
+// RENDERIZADO DEL NUEVO CORAZÓN 3D EN EL CENTRO
+function draw3DHeart() {
+  c.save();
+  c.globalCompositeOperation = "lighter";
+
+  const pulse = 1 + Math.sin(time * 0.004) * 0.08 + Math.pow(Math.sin(time * 0.008), 4) * 0.04;
+  
+  for (let i = 0; i < heart3D.length; i++) {
+    const p = heart3D[i];
+    
+    // Proyección tridimensional completa
+    const q = project(p.x * pulse, p.y * pulse, p.z * pulse);
+    
+    const alpha = 0.4 + 0.6 * Math.abs(Math.sin(time * 0.003 + p.phase));
+    c.globalAlpha = alpha;
+    c.fillStyle = p.color;
+    c.shadowColor = p.color;
+    c.shadowBlur = 10;
+    
+    const size = Math.max(0.6, p.s * q.scale * zoom * 1.5);
+    c.beginPath();
+    c.arc(q.x, q.y, size, 0, Math.PI * 2);
+    c.fill();
+  }
+  
+  c.restore();
 }
 
 function galaxyDraw(){
@@ -423,6 +612,7 @@ function galaxyDraw(){
  c.save();
  c.globalCompositeOperation="lighter";
 
+ // GALAXIA ESPIRAL DIBUJO
  const arr=[];
  for(const p of pts){
     const a=p.a+time*.00016;
@@ -441,6 +631,7 @@ function galaxyDraw(){
  }
  c.restore();
 
+ // NÚCLEO BRILLANTE CENTRAL DE LA GALAXIA
  const pulse=1+Math.sin(time*.003)*.07;
  const core=34*pulse*zoom;
  const glow=c.createRadialGradient(cx,cy,0,cx,cy,core*3.5);
@@ -449,47 +640,59 @@ function galaxyDraw(){
  glow.addColorStop(1,"rgba(255,120,0,0)");
  c.fillStyle=glow;c.beginPath();c.arc(cx,cy,core*3.5,0,Math.PI*2);c.fill();
 
- const heartY=cy-Math.min(h*.20,125);
- drawParticleHeart(cx,heartY,Math.min(w,h)*.115);
+ // DIBUJAMOS EL NUEVO CORAZÓN EN LUGAR DEL ANTERIOR
+ draw3DHeart();
 }
 
-function flowerDraw(f){
- const a=f.a+time*.00045;
- const x=Math.cos(a)*f.r;
- const z=Math.sin(a)*f.r;
- const y=Math.sin(a*2)*35;
- const q=project(x,y,z);
- const size=Math.max(22,48*q.scale*zoom);
+function flowerDraw(f) {
+  const a = f.a + time * 0.00045;
+  const x = Math.cos(a) * f.r;
+  const z = Math.sin(a) * f.r;
+  const y = Math.sin(a * 2) * 35;
+  const q = project(x, y, z);
 
- f.x=q.x;f.y=q.y;f.size=size;
+  // Escala adaptativa en pantalla
+  const size = Math.max(36, 62 * q.scale * zoom);
+  f.x = q.x;
+  f.y = q.y;
+  f.size = size;
 
- c.save();
- c.translate(q.x,q.y);
+  c.save();
+  c.translate(q.x, q.y);
 
- c.globalAlpha=.18;
- const halo=c.createRadialGradient(0,0,0,0,0,size*2);
- halo.addColorStop(0,"rgba(255,220,50,0.8)");
- halo.addColorStop(1,"rgba(255,150,0,0)");
- c.fillStyle=halo;c.beginPath();c.arc(0,0,size*2,0,Math.PI*2);c.fill();
- c.globalAlpha=1;
+  // Halo/Glow de fondo
+  const halo = c.createRadialGradient(0, 0, 0, 0, 0, size * 1.8);
+  halo.addColorStop(0, "rgba(255,220,50,0.6)");
+  halo.addColorStop(1, "rgba(255,150,0,0)");
+  c.fillStyle = halo;
+  c.beginPath();
+  c.arc(0, 0, size * 1.8, 0, Math.PI * 2);
+  c.fill();
 
- const cachedImg = flowerCaches[f.kind] || flowerCaches["sunflower"];
- const renderSize = size * 2.3;
- c.drawImage(cachedImg, -renderSize/2, -renderSize/2, renderSize, renderSize);
+  // Renderizado desde la imagen en caché correspondiente
+  const cachedImg = flowerCaches[f.kind] || flowerCaches["sunflower"];
+  const renderSize = size * 2.3;
+  c.drawImage(cachedImg, -renderSize / 2, -renderSize / 2, renderSize, renderSize);
 
- c.font=`italic ${Math.max(11,13*q.scale*zoom)}px Georgia`;
- c.textAlign="center";
- c.fillStyle="#fff1ad";
- c.shadowColor="rgba(0,0,0,0.8)";
- c.shadowBlur=4;
- c.fillText(f.t,0,size*1.25);
- c.shadowBlur=0;
+  // Texto con sombra
+  c.font = `italic ${Math.max(16, 20 * q.scale * zoom)}px Georgia`;
+  c.textAlign = "center";
+  c.fillStyle = "#fff1ad";
+  c.shadowColor = "rgba(0,0,0,0.8)";
+  c.shadowBlur = 4;
+  c.fillText(f.t, 0, size * 1.25);
+  c.shadowBlur = 0;
 
- if(selected===f){
-    c.strokeStyle="#ffe77b";c.lineWidth=2;
-    c.beginPath();c.arc(0,0,size*1.15,0,Math.PI*2);c.stroke();
- }
- c.restore();
+  // Resaltado al seleccionar la flor
+  if (selected === f) {
+    c.strokeStyle = "#ffe77b";
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.arc(0, 0, size * 1.2, 0, Math.PI * 2);
+    c.stroke();
+  }
+
+  c.restore();
 }
 
 function burstsDraw(){
@@ -502,7 +705,7 @@ function burstsDraw(){
 }
 
 function burst(x,y){
-  for(let i=0;i<30;i++){
+  for(let i=0;i<25;i++){
     let a=Math.random()*Math.PI*2,sp=1+Math.random()*3.5;
     bursts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,s:1+Math.random()*2.5});
   }
@@ -511,7 +714,7 @@ function burst(x,y){
 function loop(ts){
  time=ts;
  if(started&&!drag)rotY+=.0015;
- starsDraw();galaxyDraw();
+ starsDraw();galaxyDraw();drawPlanets();
  flowers.slice().sort((a,b)=>a.y-b.y).forEach(flowerDraw);
  burstsDraw();
  requestAnimationFrame(loop);
@@ -519,23 +722,46 @@ function loop(ts){
 requestAnimationFrame(loop);
 
 function pos(e){
- const r=W.getBoundingClientRect(),q=e.touches?e.touches[0]:e;
+ const r=W.getBoundingClientRect(),q=(e.touches && e.touches.length > 0) ? e.touches[0] : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : e);
  return{x:q.clientX-r.left,y:q.clientY-r.top}
 }
-function hit(x,y){
- let best=null,bd=Infinity;
- for(const f of flowers){let d=Math.hypot(x-f.x,y-f.y);if(d<Math.max(27,f.size*1.25)&&d<bd){best=f;bd=d}}
- return best;
+
+function hit(x, y) {
+  let best = null, bd = Infinity;
+
+  for (const f of flowers) {
+    // Distancia entre el toque (x, y) y el centro proyectado de la flor (f.x, f.y)
+    const d = Math.hypot(x - f.x, y - f.y);
+
+    // Detección de radio mejorada: se asegura de que el área táctil sea accesible y cómoda
+    const hitRadius = Math.max(35, f.size * 1.3);
+
+    if (d < hitRadius && d < bd) {
+      best = f;
+      bd = d;
+    }
+  }
+
+  return best;
 }
 
 function openFlower(f){
- selected=f;
- burst(f.x,f.y);
- document.getElementById("ltitle").textContent=f.t;
- document.getElementById("ltext").textContent=f.m;
- const photo=document.getElementById("letterPhoto");
- photo.src=f.photo; photo.alt=f.t;
- document.getElementById("modal").style.display="flex";
+  selected = f;
+  burst(f.x, f.y);
+  document.getElementById("ltitle").textContent = f.t;
+  document.getElementById("ltext").textContent = f.m;
+  const photo = document.getElementById("letterPhoto");
+  photo.src = f.photo; photo.alt = f.t;
+  document.getElementById("modal").style.display = "flex";
+
+  interactionCount++;
+  
+  if(interactionCount >= 8){
+    setTimeout(() => {
+      if(document.getElementById("modal").style.display !== "none") return;
+      document.getElementById("final").style.display = "flex";
+    }, 1000);
+  }
 }
 
 W.addEventListener("mousedown",e=>{drag=true;const p=pos(e);lx=p.x;ly=p.y});
@@ -548,30 +774,29 @@ let touchStart=null;
 W.addEventListener("touchstart",e=>{const p=pos(e);touchStart=p;lx=p.x;ly=p.y;drag=true},{passive:true});
 W.addEventListener("touchmove",e=>{if(!drag)return;const p=pos(e);rotY+=(p.x-lx)*.008;rotX+=(p.y-ly)*.006;rotX=Math.max(-1,Math.min(1,rotX));lx=p.x;ly=p.y},{passive:true});
 W.addEventListener("touchend",e=>{
- drag=false;const p=pos(e.changedTouches[0]);
- if(touchStart&&Math.hypot(p.x-touchStart.x,p.y-touchStart.y)<12){const f=hit(p.x,p.y);if(f)openFlower(f)}
+ drag=false;
+ if(e.changedTouches && e.changedTouches.length > 0){
+   const p=pos(e);
+   if(touchStart&&Math.hypot(p.x-touchStart.x,p.y-touchStart.y)<12){const f=hit(p.x,p.y);if(f)openFlower(f)}
+ }
  touchStart=null;
 });
 
-document.getElementById("close").onclick=()=>{document.getElementById("modal").style.display="none";selected=null};
-document.getElementById("modal").onclick=e=>{if(e.target.id==="modal")e.currentTarget.style.display="none"};
-document.getElementById("home").onclick=()=>{rotX=.16;rotY=0;zoom=1;started=true;};
-document.getElementById("again").onclick=()=>document.getElementById("final").style.display="none";
-
-let interactionCount=0;
-const originalOpen=openFlower;
-openFlower=function(f){
- interactionCount++;
- originalOpen(f);
- if(interactionCount>=20){
-  setTimeout(()=>{
-   if(document.getElementById("modal").style.display!=="none")return;
+document.getElementById("close").onclick=()=>{
+ document.getElementById("modal").style.display="none";
+ selected=null;
+ if(interactionCount>=8){
    document.getElementById("final").style.display="flex";
-  },900);
  }
 };
+document.getElementById("modal").onclick=e=>{if(e.target.id==="modal"){document.getElementById("modal").style.display="none";selected=null}};
+document.getElementById("home").onclick=()=>{rotX=.16;rotY=0;zoom=1;started=true;};
+document.getElementById("again").onclick = () => {
+  document.getElementById("final").style.display = "none";
+  interactionCount = 0;
+  selected = null;
+};
 
-// --- CONFIGURACIÓN DE MÚSICA DE FONDO MP3 Y BOTÓN DE INICIO ---
 const bgMusic = new Audio("Karol.mp3");
 bgMusic.loop = true;
 bgMusic.volume = 0.4;
@@ -601,6 +826,8 @@ document.getElementById("start").onclick = () => {
     toggleMusic();
   }
 };
+
+
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
