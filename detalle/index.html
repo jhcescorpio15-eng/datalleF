@@ -563,7 +563,7 @@ const originalOpen=openFlower;
 openFlower=function(f){
  interactionCount++;
  originalOpen(f);
- if(interactionCount>=8){
+ if(interactionCount>=20){
   setTimeout(()=>{
    if(document.getElementById("modal").style.display!=="none")return;
    document.getElementById("final").style.display="flex";
